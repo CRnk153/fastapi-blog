@@ -12,6 +12,7 @@ from apps import app
 
 router = APIRouter()
 
+
 async def verify_token(request: Request, call_next):
     token = request.cookies.get("access_token")
     if token:
@@ -33,14 +34,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.middleware("http")(verify_token)
+
 
 @router.get('/')
 def home_get(request: Request):
     if hasattr(request.state, "user"):
         return JSONResponse(content=f'Hello, {request.state.user.get("sub")}!')
     return "Hello world"
+
 
 @router.post('/auth/register')
 def auth_register_post(response: Response,
@@ -67,6 +69,7 @@ def auth_register_post(response: Response,
 
     return "Signed up and logged in successfully"
 
+
 @router.post('/auth/login')
 def auth_login_post(user: UserCreate,
                     db: SessionLocal = Depends(get_db)
@@ -86,12 +89,14 @@ def auth_login_post(user: UserCreate,
 
     return "Logged in successfully"
 
+
 @router.get('/auth/logout')
 def auth_logout_get(request: Request):
     request.state.user = None
     response = RedirectResponse('/')
     response.set_cookie(key="access_token", value="", httponly=True, secure=True)
     return "Logged out successfully"
+
 
 @router.post('/posts/create')
 def messages_post(request: Request,
@@ -109,9 +114,9 @@ def messages_post(request: Request,
     db.commit()
     db.refresh(db_post)
 
+
 @router.get('/posts/{post_id:int}')
 def message_get(post_id: int,
-                request: Request,
                 db: SessionLocal = Depends(get_db)):
     post = db.query(Post).filter(id == post_id).first()
     if not post:
@@ -128,9 +133,8 @@ def message_get(post_id: int,
 
 @router.get('/posts/all/{page:int}')
 def messages_get(page: int,
-                 request: Request,
                  db: SessionLocal = Depends(get_db)):
-    posts = db.query(Post).offset((page - 1)*POSTS_PER_PAGE).limit(POSTS_PER_PAGE).all()
+    posts = db.query(Post).offset((page - 1) * POSTS_PER_PAGE).limit(POSTS_PER_PAGE).all()
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,
@@ -139,3 +143,17 @@ def messages_get(page: int,
                   for post in posts]
     db.close()
     return JSONResponse(content=posts_json)
+
+
+@router.get('/users/{user_to_follow_id:int}/follow')
+def follow_get(request: Request,
+               user_to_follow_id: int,
+               db: SessionLocal = Depends(get_db)
+               ):
+    if not hasattr(request.state, "user"):
+        raise HTTPException(status_code=401, detail="Sign in first")
+    user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+    user_to_follow = db.query(User).filter(User.id == user_to_follow_id).first()
+
+    user.follow(user_to_follow)
+    db.commit()
