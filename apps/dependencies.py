@@ -2,10 +2,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import bcrypt
 import jwt
-from config import SECRET_KEY, ALGORITHM, EXPIRED_TIME
+from config import settings
 from typing import Optional
 from datetime import datetime, timedelta
-from fastapi import Depends
+from fastapi import Request, HTTPException, Depends
+from database.models import User
+from json import dumps
 
 engine = create_engine("postgresql://postgres:@localhost/fastapi")
 
@@ -33,7 +35,21 @@ def create_access_token(data: dict,
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(EXPIRED_TIME)
+        expire = datetime.utcnow() + timedelta(settings.EXPIRED_TIME)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+def check_auth(request: Request):
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Sign in first")
+    return True
+
+def get_current_user(request: Request,
+                     db: SessionLocal = Depends(get_db)):
+    if request.cookies.get("access_token"):
+        current_user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+        return current_user
+    else:
+        return None
