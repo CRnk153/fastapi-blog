@@ -44,6 +44,8 @@ class User(Base):
         overlaps="followers,user",
         foreign_keys="[Followers.followed_id]"
     )
+    liked_posts = relationship("Post", secondary="likes", back_populates="liked_by")
+    likes = relationship("Like", back_populates="user")
 
     def __init__(self, username, email, hashed_password):
         self.username = username
@@ -63,6 +65,17 @@ class User(Base):
             return True
         return False
 
+    def like(self, post_to_like):
+        if self not in post_to_like.liked_by:
+            post_to_like.liked_by.append(self)
+            return True
+        return False
+
+    def remove_like(self, post_to_remove_like):
+        if self in post_to_remove_like.liked_by:
+            post_to_remove_like.liked_by.remove(self)
+            return True
+        return False
 
 class Post(Base):
     __tablename__ = 'posts'
@@ -72,4 +85,16 @@ class Post(Base):
     content = Column(String(3000))
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(ForeignKey('users.id'))
+
     username = relationship("User", back_populates="posts")
+    likes = relationship("Like", back_populates="post")
+    liked_by = relationship("User", secondary="likes", back_populates="liked_posts")
+
+class Like(Base):
+    __tablename__ = 'likes'
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey('posts.id'))
+    user_id = Column(Integer, ForeignKey('users.id'))
+    post = relationship("Post", back_populates="likes")
+    user = relationship("User", back_populates="likes")

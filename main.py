@@ -1,8 +1,9 @@
-from apps import app
 from uvicorn import run
-from apps.routes import non_auth_router, auth_router
-app.include_router(non_auth_router)
-app.include_router(auth_router)
+from apps.routes import auth, posts, users, router_auth, router_non_auth
+from apps import app
+
+app.include_router(router_auth)
+app.include_router(router_non_auth)
 
 if __name__ == '__main__':
     run(

@@ -1,0 +1,9 @@
+fastapi=# CREATE TABLE users (
+fastapi(#  id SERIAL PRIMARY KEY,
+fastapi(#  username VARCHAR(50) UNIQUE NOT NULL,
+fastapi(#   email VARCHAR(100) UNIQUE NOT NULL,
+fastapi(#  password VARCHAR(255) NOT NULL,
+fastapi(#   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+fastapi(# );
+CREATE TABLE
+1

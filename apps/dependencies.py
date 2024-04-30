@@ -7,7 +7,6 @@ from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import Request, HTTPException, Depends
 from database.models import User
-from json import dumps
 
 engine = create_engine("postgresql://postgres:@localhost/fastapi")
 
@@ -42,14 +41,16 @@ def create_access_token(data: dict,
 
 def check_auth(request: Request):
     token = request.cookies.get("access_token")
+
     if not token:
-        raise HTTPException(status_code=401, detail="Sign in first")
+        raise HTTPException(status_code=401, detail="Sign in first", headers={"Location": "/"})
+
     return True
 
 def get_current_user(request: Request,
                      db: SessionLocal = Depends(get_db)):
     if request.cookies.get("access_token"):
         current_user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
-        return current_user
+        return current_user.id
     else:
         return None
