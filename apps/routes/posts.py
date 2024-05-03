@@ -1,7 +1,7 @@
 from . import router_auth, router_non_auth
 from apps.schemas import PostCreate
 from apps.dependencies import SessionLocal, get_db
-from database.models import User, Post, Like
+from database.models import User, Post, Like, Followers
 from config import settings
 
 from fastapi import Request, Depends, HTTPException
@@ -22,22 +22,30 @@ def messages_post(request: Request,
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
-    return JSONResponse(status_code=200, content={"Post published"})
+    return JSONResponse(status_code=200, content={"message": "Post published"})
+
+@router_auth.post('/posts/remove/{post_id:int}')
+def message_delete_get(request: Request,
+                       post_id: int,
+                       db: SessionLocal = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if post.user_id != user.id:
+        raise HTTPException(status_code=400, detail="You do not own this post")
+    post.hide()
+    db.commit()
 
 @router_non_auth.get('/posts/{post_id:int}')
-def message_get(request: Request,
-                post_id: int,
+def message_get(post_id: int,
                 db: SessionLocal = Depends(get_db)):
-    raw_path = request.url.path
-    print(raw_path)
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = db.query(Post).filter(Post.id == post_id).filter(Post.hidden == bool(0)).first()
     if not post:
         raise HTTPException(status_code=400, detail="This post does not exist")
     post_json = {
         'id': post.id,
         'title': post.title,
         'content': post.content,
-        'user': post.username.username,
+        'user': post.user.username,
         'date': str(post.created_at),
         'likes': db.query(func.count(Like.post_id)).filter(Like.post_id == post.id).scalar()}
     db.close()
@@ -47,11 +55,11 @@ def message_get(request: Request,
 @router_non_auth.get('/posts/all/{page:int}')
 def messages_get(page: int,
                  db: SessionLocal = Depends(get_db)):
-    posts = db.query(Post).offset((page - 1) * settings.POSTS_PER_PAGE).limit(settings.POSTS_PER_PAGE).all()
+    posts = db.query(Post).offset((page - 1) * settings.POSTS_PER_PAGE).limit(settings.POSTS_PER_PAGE).filter(Post.hidden == bool(0)).all()
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,
-                   'user': post.username.username,
+                   'user': post.user.username,
                    'date': str(post.created_at)}
                   for post in posts]
     db.close()
@@ -63,11 +71,12 @@ def followed_posts_get(request: Request,
                        db: SessionLocal = Depends(get_db)):
 
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
-    posts = db.query(Post).filter(Post.user_id.in_(user.following)).offset((page - 1) * settings.POSTS_PER_PAGE).limit(settings.POSTS_PER_PAGE).all()
+    followed_users = db.query(Followers).filter(Followers.follower_id == user.id).all()
+    posts = db.query(Post).filter(Post.user_id.in_([follow.followed_id for follow in followed_users])).filter(Post.hidden == bool(0)).offset((page - 1) * settings.POSTS_PER_PAGE).limit(settings.POSTS_PER_PAGE).all()
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,
-                   'user': post.username.username,
+                   'user': post.user.username,
                    'date': str(post.created_at)}
 
                   for post in posts]
@@ -79,7 +88,8 @@ def post_like_get(request: Request,
                   db: SessionLocal = Depends(get_db)):
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post = db.query(Post).filter(Post.id == post_id).first()
-    user.like(post)
+    if not user.like(post, db):
+        raise HTTPException(status_code=400, detail="This post is already liked")
     db.commit()
     db.close()
     return JSONResponse(content={"message": "Successful"})
@@ -90,7 +100,8 @@ def post_remove_like_get(request: Request,
                          db: SessionLocal = Depends(get_db)):
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post = db.query(Post).filter(Post.id == post_id).first()
-    user.remove_like(post)
+    if not user.remove_like(post, db):
+        raise HTTPException(status_code=400, detail="This post isn't liked")
     db.commit()
     db.close()
     return JSONResponse(content={"message": "Successful"})

@@ -1,3 +1,5 @@
+from starlette.responses import JSONResponse
+
 from config import settings
 from . import router_non_auth, router_auth
 from apps.schemas import UserCreate
@@ -26,7 +28,7 @@ def auth_register_post(response: Response,
     db.refresh(db_user)
 
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=timedelta(settings.EXPIRED_TIME)
+        data={"sub": user.username}, expires_delta=timedelta(minutes=settings.EXPIRED_TIME)
     )
 
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
@@ -48,7 +50,7 @@ def auth_login_post(response: Response,
         data={"sub": user.username}, expires_delta=timedelta(settings.EXPIRED_TIME)
     )
 
-    server_response = response
+    server_response = JSONResponse(status_code=200, content={"message": "Successful"})
     server_response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
 
     return server_response
@@ -57,6 +59,6 @@ def auth_login_post(response: Response,
 def auth_logout_get(request: Request,
                     response: Response):
     request.state.user = None
-    server_response = response
+    server_response = JSONResponse(status_code=200, content={"message": "Successful"})
     server_response.set_cookie(key="access_token", value="", httponly=True, secure=True)
     return server_response

@@ -15,7 +15,7 @@ def user_get(user_id,
     user = db.query(User).filter(User.id == user_id).first()
     user_info = {
         "username": user.username,
-        "last_seen": user.last_seen,
+        "last_seen": str(user.last_seen),
         "followers": db.query(func.count(Followers.follower_id)).filter(Followers.followed_id == user.id).scalar(),
         "following": db.query(func.count(Followers.followed_id)).filter(Followers.follower_id == user.id).scalar(),
         "posts": db.query(func.count(Post.id)).filter(Post.user_id == user.id).scalar()
@@ -34,7 +34,7 @@ def user_posts_get(page: int,
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,
-                   'user': post.username.username,
+                   'user': post.user.username,
                    'date': str(post.created_at)}
                   for post in posts]
     db.close()
@@ -50,10 +50,9 @@ def follow_get(request: Request,
     user_to_follow = db.query(User).filter(User.id == user_to_follow_id).first()
     if user == user_to_follow:
         raise HTTPException(status_code=400, detail="You can't follow yourself")
-    if user_to_follow in user.following:
-        raise HTTPException(status_code=400, detail="Already followed")
 
-    user.follow(user_to_follow)
+    if not user.follow(user_to_follow, db):
+        raise HTTPException(status_code=400, detail="You already following this user")
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Followed successfully"})
 
@@ -66,9 +65,8 @@ def unfollow_get(request: Request,
     user_to_unfollow = db.query(User).filter(User.id == user_to_unfollow_id).first()
     if user == user_to_unfollow:
         raise HTTPException(status_code=400, detail="You can't unfollow yourself")
-    if user_to_unfollow not in user.following:
-        raise HTTPException(status_code=400, detail="You're not following this user")
 
-    user.unfollow(user_to_unfollow)
+    if not user.unfollow(user_to_unfollow):
+        raise HTTPException(status_code=400, detail="You aren't following this user")
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Unfollowed successfully"})

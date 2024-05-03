@@ -1,10 +1,11 @@
-from sqlalchemy import String, Integer, ForeignKey, Column, DateTime
+from sqlalchemy import String, Integer, ForeignKey, Column, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
 Base = declarative_base()
 
+# I have no idea how all of this works
 
 class Role(Base):
     __tablename__ = 'roles'
@@ -20,6 +21,10 @@ class Followers(Base):
     follower_id = Column(Integer, ForeignKey('users.id'))
     followed_id = Column(Integer, ForeignKey('users.id'))
 
+    def __init__(self, follower_id, followed_id):
+        self.follower_id = follower_id
+        self.followed_id = followed_id
+
 class User(Base):
     __tablename__ = 'users'
 
@@ -30,7 +35,10 @@ class User(Base):
     hashed_password = Column(String, index=True)
     created_at = Column(DateTime)
     last_seen = Column(DateTime, default=datetime.utcnow())
-    posts = relationship("Post", back_populates="username")
+
+    posts = relationship("Post", back_populates="user")
+    likes = relationship("Like", back_populates="user")
+
     followers = relationship(
         "Followers",
         backref="user",
@@ -44,8 +52,6 @@ class User(Base):
         overlaps="followers,user",
         foreign_keys="[Followers.followed_id]"
     )
-    liked_posts = relationship("Post", secondary="likes", back_populates="liked_by")
-    likes = relationship("Like", back_populates="user")
 
     def __init__(self, username, email, hashed_password):
         self.username = username
@@ -53,27 +59,28 @@ class User(Base):
         self.hashed_password = hashed_password
         self.created_at = datetime.utcnow()
 
-    def follow(self, user_to_follow):
-        if user_to_follow not in self.following:
-            self.following.append(user_to_follow)
+    def follow(self, user_to_follow, db):
+        if not db.query(Followers).filter(Followers.follower_id == self.id).filter(Followers.followed_id == user_to_follow.id).first():
+            db.add(Followers(follower_id=self.id, followed_id=user_to_follow.id))
             return True
         return False
 
-    def unfollow(self, user_to_unfollow):
-        if user_to_unfollow in self.following:
-            self.following.remove(user_to_unfollow)
+    def unfollow(self, user_to_unfollow, db):
+        if fw := db.query(Followers).filter(Followers.follower_id == self.id).filter(Followers.followed_id == user_to_unfollow.id).first():
+            db.delete(fw)
             return True
         return False
 
-    def like(self, post_to_like):
-        if self not in post_to_like.liked_by:
-            post_to_like.liked_by.append(self)
+    def like(self, post_to_like, db):
+        if not db.query(Like).filter(Like.user_id == self.id).filter(Like.post_id == post_to_like.id).first():
+            db.add(Like(user=self, post=post_to_like))
+            db.commit()
             return True
         return False
 
-    def remove_like(self, post_to_remove_like):
-        if self in post_to_remove_like.liked_by:
-            post_to_remove_like.liked_by.remove(self)
+    def remove_like(self, post_to_remove_like, db):
+        if like_to_remove := db.query(Like).filter(Like.user_id == self.id).filter(Like.post_id == post_to_remove_like.id).first():
+            db.delete(like_to_remove)
             return True
         return False
 
@@ -84,12 +91,14 @@ class Post(Base):
     title = Column(String(100))
     content = Column(String(3000))
     created_at = Column(DateTime, default=datetime.utcnow)
+    hidden = Column(Boolean, default=0)
+
     user_id = Column(ForeignKey('users.id'))
-
-    username = relationship("User", back_populates="posts")
+    user = relationship("User", back_populates="posts")
     likes = relationship("Like", back_populates="post")
-    liked_by = relationship("User", secondary="likes", back_populates="liked_posts")
 
+    def hide(self):
+        self.hidden = True
 class Like(Base):
     __tablename__ = 'likes'
 
@@ -98,3 +107,7 @@ class Like(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     post = relationship("Post", back_populates="likes")
     user = relationship("User", back_populates="likes")
+
+    def __init__(self, user, post):
+        self.user = user
+        self.post = post
