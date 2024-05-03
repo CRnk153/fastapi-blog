@@ -21,7 +21,6 @@ def home_get(request: Request,
 
 async def verify_token(request: Request, call_next):
     token = request.cookies.get("access_token")
-
     if token != "":
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

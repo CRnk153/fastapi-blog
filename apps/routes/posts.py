@@ -24,12 +24,14 @@ def messages_post(request: Request,
     db.refresh(db_post)
     return JSONResponse(status_code=200, content={"message": "Post published"})
 
-@router_auth.post('/posts/remove/{post_id:int}')
+@router_auth.get('/posts/remove/{post_id:int}')
 def message_delete_get(request: Request,
                        post_id: int,
                        db: SessionLocal = Depends(get_db)):
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=400, detail="This post does not exist")
     if post.user_id != user.id:
         raise HTTPException(status_code=400, detail="You do not own this post")
     post.hide()
@@ -55,7 +57,7 @@ def message_get(post_id: int,
 @router_non_auth.get('/posts/all/{page:int}')
 def messages_get(page: int,
                  db: SessionLocal = Depends(get_db)):
-    posts = db.query(Post).offset((page - 1) * settings.POSTS_PER_PAGE).limit(settings.POSTS_PER_PAGE).filter(Post.hidden == bool(0)).all()
+    posts = db.query(Post).filter(Post.hidden == bool(0)).offset((page - 1) * settings.POSTS_PER_PAGE).limit(settings.POSTS_PER_PAGE).all()
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,

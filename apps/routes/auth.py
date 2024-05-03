@@ -37,8 +37,7 @@ def auth_register_post(response: Response,
 
 
 @router_non_auth.post('/auth/login')
-def auth_login_post(response: Response,
-                    user: UserCreate,
+def auth_login_post(user: UserCreate,
                     db: SessionLocal = Depends(get_db)):
     if not db.query(User).filter(User.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username does not exist")
@@ -56,8 +55,7 @@ def auth_login_post(response: Response,
     return server_response
 
 @router_auth.get('/auth/logout')
-def auth_logout_get(request: Request,
-                    response: Response):
+def auth_logout_get(request: Request):
     request.state.user = None
     server_response = JSONResponse(status_code=200, content={"message": "Successful"})
     server_response.set_cookie(key="access_token", value="", httponly=True, secure=True)

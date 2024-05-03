@@ -66,7 +66,7 @@ def unfollow_get(request: Request,
     if user == user_to_unfollow:
         raise HTTPException(status_code=400, detail="You can't unfollow yourself")
 
-    if not user.unfollow(user_to_unfollow):
+    if not user.unfollow(user_to_unfollow, db):
         raise HTTPException(status_code=400, detail="You aren't following this user")
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Unfollowed successfully"})
