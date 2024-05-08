@@ -13,6 +13,11 @@ class Role(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(20), index=True)
 
+class PostType(Base):
+    __tablename__ = 'ptypes'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(20), index=True)
 
 class Followers(Base):
     __tablename__ = 'followers'
@@ -88,6 +93,7 @@ class Post(Base):
     __tablename__ = 'posts'
 
     id = Column(Integer, primary_key=True, index=True)
+
     title = Column(String(100))
     content = Column(String(3000))
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -97,8 +103,17 @@ class Post(Base):
     user = relationship("User", back_populates="posts")
     likes = relationship("Like", back_populates="post")
 
+    type = Column(Integer, ForeignKey('ptypes.id'), default=1)
+    refer_to = Column(Integer, ForeignKey('posts.id'), default=None)
+
+    children = relationship("Post",
+                            foreign_keys=[refer_to],
+                            backref="parent_post",
+                            remote_side=[id])
+
     def hide(self):
         self.hidden = True
+
 class Like(Base):
     __tablename__ = 'likes'
 

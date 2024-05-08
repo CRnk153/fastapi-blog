@@ -11,8 +11,6 @@ import jwt
 router_non_auth = APIRouter()
 router_auth = APIRouter(dependencies=[Depends(check_auth)])
 
-# I hate middleware
-
 @router_non_auth.get('/')
 def home_get(request: Request,
              db: SessionLocal = Depends(get_db)):
@@ -21,7 +19,8 @@ def home_get(request: Request,
 
 async def verify_token(request: Request, call_next):
     token = request.cookies.get("access_token")
-    if token != "":
+
+    if token:
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
             request.state.user = payload
