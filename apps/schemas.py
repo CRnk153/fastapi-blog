@@ -1,8 +1,8 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 class UserBase(BaseModel):
-    username: str
+    username: str = Field(min_length=5, max_length=20)
     email: EmailStr
 
 class UserCreate(UserBase):
@@ -10,16 +10,20 @@ class UserCreate(UserBase):
 
 class User(UserBase):
     id: int
-    role: int
+    role: int = Field(lt=4, gt=0)
 
     class Config:
+        def __init__(self):
+            pass
+
         from_attributes = True
 
-class UserUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    password: Optional[str] = None
-    username: Optional[str] = None
-    role: Optional[int]
+class UserProfileEdit(BaseModel):
+    username: str = Field(min_length=5, max_length=20)
+    email: EmailStr
+
+class UserPasswordChange(BaseModel):
+    password: str = Field(min_length=8)
 
 class PostBase(BaseModel):
     title: str
@@ -33,4 +37,7 @@ class Post(PostBase):
     user_id: int
 
     class Config:
+        def __init__(self):
+            pass
+
         orm_mode = True

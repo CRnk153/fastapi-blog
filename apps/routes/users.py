@@ -1,4 +1,5 @@
-from apps.dependencies import get_db, SessionLocal, get_comments
+from apps.dependencies import get_db, SessionLocal, get_comments, hash_password
+from apps.schemas import UserProfileEdit, UserPasswordChange
 
 from database.models import User, Post, Followers, Like
 from . import router_auth, router_non_auth
@@ -22,7 +23,7 @@ def user_get(user_id,
         "following": db.query(func.count(Followers.followed_id)).filter(Followers.follower_id == user.id).scalar(),
         "posts": db.query(func.count(Post.id)).filter(Post.user_id == user.id).filter(Post.type == 1).scalar()
     }
-    return JSONResponse(content={"data": user_info})
+    return JSONResponse(content=user_info)
 
 @router_non_auth.get('/users/{user_id:int}/posts/{page:int}')
 def user_posts_get(page: int,
@@ -82,3 +83,37 @@ def unfollow_get(request: Request,
         raise HTTPException(status_code=400, detail="You aren't following this user")
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Unfollowed successfully"})
+
+@router_auth.post('/users/edit-profile')
+def edit_profile_post(request: Request,
+                      user_body: UserProfileEdit,
+                      db: SessionLocal = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+    if db.query(User).filter(User.username == user_body.username).first():
+        raise HTTPException(status_code=400, detail="Username is already used")
+    if db.query(User).filter(User.email == user_body.email).first():
+        raise HTTPException(status_code=400, detail="Email is already used")
+    user.username = user_body.username
+    user.email = user_body.email
+    db.commit()
+    db.refresh(user)
+
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=timedelta(minutes=settings.EXPIRED_TIME)
+    )
+
+    server_response = JSONResponse(status_code=200, content={"message": "Successful"})
+    server_response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
+
+    return server_response
+
+@router_auth.post('/users/change-password')
+def change_password_post(request: Request,
+                         user_body: UserPasswordChange,
+                         db: SessionLocal = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+    user.hashed_password = hash_password(user_body.password)
+    db.commit()
+    db.refresh(user)
+
+    return JSONResponse(status_code=200, content={"message": "Successful"})

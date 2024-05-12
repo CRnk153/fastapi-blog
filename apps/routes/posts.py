@@ -140,10 +140,10 @@ def post_remove_like_get(request: Request,
     return JSONResponse(content={"message": "Successful"})
 
 @router_auth.post('/posts/{post_id}/comment')
-def post_comment_get(request: Request,
-                     comment: PostCreate,
-                     post_id: int,
-                     db: SessionLocal = Depends(get_db)):
+def post_comment_post(request: Request,
+                      comment: PostCreate,
+                      post_id: int,
+                      db: SessionLocal = Depends(get_db)):
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post_to_comment = db.query(Post).filter(Post.id == post_id).first()
     if not post_to_comment:
@@ -160,4 +160,27 @@ def post_comment_get(request: Request,
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
-    return JSONResponse(status_code=200, content={"message": "Post published"})
+    return JSONResponse(status_code=200, content={"message": "Comment published"})
+
+@router_auth.post('/posts/{post_id}/answer')
+def post_answer_post(request: Request,
+                     answer: PostCreate,
+                     post_id: int,
+                     db: SessionLocal = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+    post_to_answer = db.query(Post).filter(Post.id == post_id).first()
+    if not post_to_answer:
+        raise HTTPException(status_code=400, detail="No such post")
+    if post_to_answer.type == 1:
+        raise HTTPException(status_code=400, detail="You can't answer to the post")
+    db_post = Post(
+        title=answer.title,
+        content=answer.content,
+        user_id=user.id,
+        type=3,
+        refer_to=post_id
+    )
+    db.add(db_post)
+    db.commit()
+    db.refresh(db_post)
+    return JSONResponse(status_code=200, content={"message": "Answer published"})
