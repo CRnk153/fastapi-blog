@@ -1,12 +1,12 @@
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, aliased
+from sqlalchemy import create_engine, func
 import bcrypt
 import jwt
 from config import settings
 from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import Request, HTTPException, Depends
-from database.models import User
+from database.models import User, Post, Like
 
 engine = create_engine("postgresql://postgres:@localhost/fastapi")
 
@@ -54,3 +54,28 @@ def get_current_user(request: Request,
         return current_user.id
     else:
         return None
+
+def get_comments(post_id, db):
+    parent_comment = aliased(Post)
+    child_comment = aliased(Post)
+
+    comments = db.query(child_comment). \
+        join(parent_comment, parent_comment.id == child_comment.refer_to). \
+        filter(parent_comment.id == post_id). \
+        filter(child_comment.hidden == bool(0)). \
+        with_entities(child_comment)
+
+    comment_list = []
+    for comment in comments:
+        comment_data = {
+            'id': comment.id,
+            'title': comment.title,
+            'content': comment.content,
+            'user': comment.user.username,
+            'date': str(comment.created_at),
+            'likes': db.query(func.count(Like.post_id)).filter(Like.post_id == comment.id).scalar(),
+            'answers': get_comments(comment.id, db)
+        }
+        comment_list.append(comment_data)
+
+    return comment_list

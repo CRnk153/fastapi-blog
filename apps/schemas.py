@@ -15,14 +15,6 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
-class UserInDB(User):
-    hashed_password: str
-    role: int
-
-class UserDB(User):
-    hashed_password: str
-    role: int
-
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = None
@@ -42,9 +34,3 @@ class Post(PostBase):
 
     class Config:
         orm_mode = True
-
-class PostInDB(Post):
-    user_id: int
-
-class PostDB(Post):
-    user_id: int

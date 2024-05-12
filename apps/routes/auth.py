@@ -11,8 +11,7 @@ from fastapi import Response, Depends, HTTPException, Request
 from datetime import timedelta
 
 @router_non_auth.post('/auth/register')
-def auth_register_post(response: Response,
-                       user: UserCreate,
+def auth_register_post(user: UserCreate,
                        db: SessionLocal = Depends(get_db)):
     if db.query(User).filter(User.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -31,9 +30,10 @@ def auth_register_post(response: Response,
         data={"sub": user.username}, expires_delta=timedelta(minutes=settings.EXPIRED_TIME)
     )
 
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
+    server_response = JSONResponse(status_code=200, content={"message": "Successful"})
+    server_response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
 
-    return "Signed up and logged in successfully"
+    return server_response
 
 
 @router_non_auth.post('/auth/login')
