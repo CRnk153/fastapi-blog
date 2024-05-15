@@ -1,11 +1,9 @@
 from sqlalchemy import String, Integer, ForeignKey, Column, DateTime, Boolean
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, declarative_base
 from datetime import datetime
 
-Base = declarative_base()
 
-# I have no idea how all of this works
+Base = declarative_base()
 
 class Role(Base):
     __tablename__ = 'roles'
@@ -65,26 +63,38 @@ class User(Base):
         self.created_at = datetime.utcnow()
 
     def follow(self, user_to_follow, db):
-        if not db.query(Followers).filter(Followers.follower_id == self.id).filter(Followers.followed_id == user_to_follow.id).first():
+        if not db.query(Followers). \
+                filter(Followers.follower_id == self.id). \
+                filter(Followers.followed_id == user_to_follow.id). \
+                first():
             db.add(Followers(follower_id=self.id, followed_id=user_to_follow.id))
             return True
         return False
 
     def unfollow(self, user_to_unfollow, db):
-        if fw := db.query(Followers).filter(Followers.follower_id == self.id).filter(Followers.followed_id == user_to_unfollow.id).first():
-            db.delete(fw)
+        if follow_to_cancel := db.query(Followers). \
+                filter(Followers.follower_id == self.id). \
+                filter(Followers.followed_id == user_to_unfollow.id). \
+                first():
+            db.delete(follow_to_cancel)
             return True
         return False
 
     def like(self, post_to_like, db):
-        if not db.query(Like).filter(Like.user_id == self.id).filter(Like.post_id == post_to_like.id).first():
+        if not db.query(Like). \
+                filter(Like.user_id == self.id). \
+                filter(Like.post_id == post_to_like.id). \
+                first():
             db.add(Like(user=self, post=post_to_like))
             db.commit()
             return True
         return False
 
     def remove_like(self, post_to_remove_like, db):
-        if like_to_remove := db.query(Like).filter(Like.user_id == self.id).filter(Like.post_id == post_to_remove_like.id).first():
+        if like_to_remove := db.query(Like). \
+                filter(Like.user_id == self.id). \
+                filter(Like.post_id == post_to_remove_like.id). \
+                first():
             db.delete(like_to_remove)
             return True
         return False

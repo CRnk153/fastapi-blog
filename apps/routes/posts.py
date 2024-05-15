@@ -31,9 +31,9 @@ def message_delete_get(request: Request,
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        raise HTTPException(status_code=400, detail="This post does not exist")
+        raise HTTPException(status_code=404, detail="This post does not exist")
     if post.user_id != user.id:
-        raise HTTPException(status_code=400, detail="You do not own this post")
+        raise HTTPException(status_code=403, detail="You do not own this post")
     post.hide()
     db.commit()
 
@@ -43,7 +43,7 @@ def message_get(post_id: int,
                 db: SessionLocal = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).filter(Post.hidden == bool(0)).first()
     if not post:
-        raise HTTPException(status_code=400, detail="This post does not exist")
+        raise HTTPException(status_code=404, detail="This post does not exist")
     post_json = {
         'id': post.id,
         'title': post.title,
@@ -72,7 +72,7 @@ def messages_get(page: int,
         offset((page - 1) * settings.POSTS_PER_PAGE). \
         limit(settings.POSTS_PER_PAGE).all()
     if not posts:
-        raise HTTPException(status_code=400, detail="No such page")
+        raise HTTPException(status_code=404, detail="No such page")
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,
@@ -98,7 +98,7 @@ def followed_posts_get(request: Request,
         offset((page - 1) * settings.POSTS_PER_PAGE). \
         limit(settings.POSTS_PER_PAGE).all()
     if not posts:
-        raise HTTPException(status_code=400, detail="No such page")
+        raise HTTPException(status_code=404, detail="No such page")
     posts_json = [{'id': post.id,
                    'title': post.title,
                    'content': post.content,
@@ -116,11 +116,11 @@ def post_like_get(request: Request,
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        raise HTTPException(status_code=400, detail="This post does not exist")
+        raise HTTPException(status_code=404, detail="This post does not exist")
     if not user.like(post, db):
-        raise HTTPException(status_code=400, detail="This post is already liked")
+        raise HTTPException(status_code=403, detail="This post is already liked")
     if post.user_id == user.id:
-        raise HTTPException(status_code=400, detail="You can't like yourself")
+        raise HTTPException(status_code=403, detail="You can't like yourself")
     db.commit()
     db.close()
     return JSONResponse(content={"message": "Successful"})
@@ -132,9 +132,9 @@ def post_remove_like_get(request: Request,
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
-        raise HTTPException(status_code=400, detail="This post does not exist")
+        raise HTTPException(status_code=404, detail="This post does not exist")
     if not user.remove_like(post, db):
-        raise HTTPException(status_code=400, detail="This post isn't liked")
+        raise HTTPException(status_code=403, detail="This post isn't liked")
     db.commit()
     db.close()
     return JSONResponse(content={"message": "Successful"})
@@ -147,9 +147,9 @@ def post_comment_post(request: Request,
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post_to_comment = db.query(Post).filter(Post.id == post_id).first()
     if not post_to_comment:
-        raise HTTPException(status_code=400, detail="No such post")
+        raise HTTPException(status_code=404, detail="No such post")
     if post_to_comment.type == 2 or post_to_comment.type == 3:
-        raise HTTPException(status_code=400, detail="You can't comment comment or answer")
+        raise HTTPException(status_code=403, detail="You can't comment comment or answer")
     db_post = Post(
         title=comment.title,
         content=comment.content,
@@ -170,9 +170,9 @@ def post_answer_post(request: Request,
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     post_to_answer = db.query(Post).filter(Post.id == post_id).first()
     if not post_to_answer:
-        raise HTTPException(status_code=400, detail="No such post")
+        raise HTTPException(status_code=404, detail="No such post")
     if post_to_answer.type == 1:
-        raise HTTPException(status_code=400, detail="You can't answer to the post")
+        raise HTTPException(status_code=403, detail="You can't answer to the post")
     db_post = Post(
         title=answer.title,
         content=answer.content,

@@ -47,6 +47,12 @@ def check_auth(request: Request):
 
     return True
 
+def check_admin(request: Request,
+                db: SessionLocal = Depends(get_db)):
+    user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
+    if user.role_id != 2:
+        raise HTTPException(status_code=401, detail="This is protected route", headers={"Location": "/"})
+
 def get_current_user(request: Request,
                      db: SessionLocal = Depends(get_db)):
     if request.cookies.get("access_token"):

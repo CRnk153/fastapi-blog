@@ -5,11 +5,12 @@ from config import settings
 
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import JSONResponse
-from apps.dependencies import check_auth, SessionLocal, get_db, get_current_user
+from apps.dependencies import check_auth, check_admin, SessionLocal, get_db, get_current_user
 import jwt
 
 router_non_auth = APIRouter()
 router_auth = APIRouter(dependencies=[Depends(check_auth)])
+protected_router = APIRouter(dependencies=[Depends(check_auth), Depends(check_admin)])
 
 @router_non_auth.get('/')
 def home_get(request: Request,
