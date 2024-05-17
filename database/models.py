@@ -45,8 +45,10 @@ class User(Base):
     followers = relationship(
         "Followers",
         backref="user",
-        primaryjoin="(User.id == Followers.follower_id)"
+        primaryjoin="(User.id == Followers.follower_id)",
+        foreign_keys="[Followers.follower_id]"
     )
+
     following = relationship(
         "User",
         secondary="followers",
@@ -123,6 +125,9 @@ class Post(Base):
 
     def hide(self):
         self.hidden = True
+
+    def unhide(self):
+        self.hidden = False
 
 class Like(Base):
     __tablename__ = 'likes'
