@@ -1,4 +1,4 @@
-from . import router_auth, router_non_auth
+from . import secure_router, guest_router
 from apps.schemas import PostCreate
 from apps.dependencies import SessionLocal, get_db, get_comments
 from database.models import User, Post, Like, Followers
@@ -9,7 +9,8 @@ from fastapi.responses import JSONResponse
 
 from sqlalchemy import func
 
-@router_auth.post('/posts/create')
+
+@secure_router.post('/posts/create')
 def messages_post(request: Request,
                   post: PostCreate,
                   db: SessionLocal = Depends(get_db)):
@@ -24,7 +25,8 @@ def messages_post(request: Request,
     db.refresh(db_post)
     return JSONResponse(status_code=200, content={"message": "Post published"})
 
-@router_auth.get('/posts/remove/{post_id:int}')
+
+@secure_router.get('/posts/remove/{post_id:int}')
 def message_delete_get(request: Request,
                        post_id: int,
                        db: SessionLocal = Depends(get_db)):
@@ -38,7 +40,7 @@ def message_delete_get(request: Request,
     db.commit()
 
 
-@router_non_auth.get('/posts/{post_id:int}')
+@guest_router.get('/posts/{post_id:int}')
 def message_get(post_id: int,
                 db: SessionLocal = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).filter(Post.hidden == bool(0)).first()
@@ -63,7 +65,7 @@ def message_get(post_id: int,
     return JSONResponse(content={"data": post_json})
 
 
-@router_non_auth.get('/posts/all/{page:int}')
+@guest_router.get('/posts/all/{page:int}')
 def messages_get(page: int,
                  db: SessionLocal = Depends(get_db)):
     posts = db.query(Post). \
@@ -84,11 +86,11 @@ def messages_get(page: int,
     db.close()
     return JSONResponse(content={"data": posts_json})
 
-@router_auth.get('/posts/followed/{page:int}')
+
+@secure_router.get('/posts/followed/{page:int}')
 def followed_posts_get(request: Request,
                        page: int,
                        db: SessionLocal = Depends(get_db)):
-
     user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
     followed_users = db.query(Followers).filter(Followers.follower_id == user.id).all()
     posts = db.query(Post). \
@@ -106,10 +108,11 @@ def followed_posts_get(request: Request,
                    'date': str(post.created_at),
                    'likes': db.query(func.count(Like.post_id)).filter(Like.post_id == post.id).scalar(),
                    'comments': get_comments(post.id, db)}
-                   for post in posts]
+                  for post in posts]
     return JSONResponse(content={"data": posts_json})
 
-@router_auth.get('/posts/{post_id:int}/like')
+
+@secure_router.get('/posts/{post_id:int}/like')
 def post_like_get(request: Request,
                   post_id: int,
                   db: SessionLocal = Depends(get_db)):
@@ -125,7 +128,8 @@ def post_like_get(request: Request,
     db.close()
     return JSONResponse(content={"message": "Successful"})
 
-@router_auth.get('/posts/{post_id:int}/remove-like')
+
+@secure_router.get('/posts/{post_id:int}/remove-like')
 def post_remove_like_get(request: Request,
                          post_id: int,
                          db: SessionLocal = Depends(get_db)):
@@ -139,7 +143,8 @@ def post_remove_like_get(request: Request,
     db.close()
     return JSONResponse(content={"message": "Successful"})
 
-@router_auth.post('/posts/{post_id}/comment')
+
+@secure_router.post('/posts/{post_id}/comment')
 def post_comment_post(request: Request,
                       comment: PostCreate,
                       post_id: int,
@@ -162,7 +167,8 @@ def post_comment_post(request: Request,
     db.refresh(db_post)
     return JSONResponse(status_code=200, content={"message": "Comment published"})
 
-@router_auth.post('/posts/{post_id}/answer')
+
+@secure_router.post('/posts/{post_id}/answer')
 def post_answer_post(request: Request,
                      answer: PostCreate,
                      post_id: int,

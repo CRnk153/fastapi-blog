@@ -1,10 +1,10 @@
-from . import protected_router
+from . import admin_router
 from apps.dependencies import SessionLocal, get_db
 from fastapi import Depends, HTTPException
 from fastapi.responses import JSONResponse
 from database.models import Post
 
-@protected_router.get('/admin/hide-post/{post_id}')
+@admin_router.get('/admin/hide-post/{post_id}')
 def hide_post_get(post_id: int,
                   db: SessionLocal = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()

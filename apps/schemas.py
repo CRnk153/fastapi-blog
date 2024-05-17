@@ -1,5 +1,4 @@
-from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 class UserBase(BaseModel):
     username: str = Field(min_length=5, max_length=20)
@@ -9,14 +8,9 @@ class UserCreate(UserBase):
     password: str
 
 class User(UserBase):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     role: int = Field(lt=4, gt=0)
-
-    class Config:
-        def __init__(self):
-            pass
-
-        from_attributes = True
 
 class UserProfileEdit(BaseModel):
     username: str = Field(min_length=5, max_length=20)
@@ -33,11 +27,6 @@ class PostCreate(PostBase):
     pass
 
 class Post(PostBase):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     user_id: int
-
-    class Config:
-        def __init__(self):
-            pass
-
-        orm_mode = True

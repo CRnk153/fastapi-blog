@@ -1,16 +1,14 @@
 from starlette.responses import JSONResponse
 
-from config import settings
-from . import router_non_auth, router_auth
+from . import guest_router, secure_router
 from apps.schemas import UserCreate
 from apps.dependencies import SessionLocal, get_db, hash_password, create_access_token, check_password
 from database.models import User
 
-from fastapi import Response, Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
-from datetime import timedelta
 
-@router_non_auth.post('/auth/register')
+@guest_router.post('/auth/register')
 def auth_register_post(user: UserCreate,
                        db: SessionLocal = Depends(get_db)):
     if db.query(User).filter(User.username == user.username).first():
@@ -27,7 +25,7 @@ def auth_register_post(user: UserCreate,
     db.refresh(db_user)
 
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=timedelta(minutes=settings.EXPIRED_TIME)
+        data={"sub": user.username}
     )
 
     server_response = JSONResponse(status_code=200, content={"message": "Successful"})
@@ -36,7 +34,7 @@ def auth_register_post(user: UserCreate,
     return server_response
 
 
-@router_non_auth.post('/auth/login')
+@guest_router.post('/auth/login')
 def auth_login_post(user: UserCreate,
                     db: SessionLocal = Depends(get_db)):
     if not db.query(User).filter(User.username == user.username).first():
@@ -46,7 +44,7 @@ def auth_login_post(user: UserCreate,
     if not check_password(user.password, db.query(User).filter(User.username == user.username).first().hashed_password):
         raise HTTPException(status_code=400, detail="Password is incorrect")
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=timedelta(settings.EXPIRED_TIME)
+        data={"sub": user.username}
     )
 
     server_response = JSONResponse(status_code=200, content={"message": "Successful"})
@@ -54,7 +52,7 @@ def auth_login_post(user: UserCreate,
 
     return server_response
 
-@router_auth.get('/auth/logout')
+@secure_router.get('/auth/logout')
 def auth_logout_get(request: Request):
     request.state.user = None
     server_response = JSONResponse(status_code=200, content={"message": "Successful"})

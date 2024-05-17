@@ -3,7 +3,6 @@ from sqlalchemy import create_engine, func
 import bcrypt
 import jwt
 from config import settings
-from typing import Optional
 from datetime import datetime, timedelta
 from fastapi import Request, HTTPException, Depends
 from database.models import User, Post, Like
@@ -27,14 +26,9 @@ def hash_password(password: str) -> str:
 def check_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-def create_access_token(data: dict,
-                        expires_delta: Optional[timedelta] = None
-                        ):
+def create_access_token(data: dict):
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.EXPIRED_TIME)
+    expire = datetime.utcnow() + timedelta(minutes=settings.EXPIRED_TIME)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
@@ -53,11 +47,9 @@ def check_admin(request: Request,
     if user.role_id != 2:
         raise HTTPException(status_code=401, detail="This is protected route", headers={"Location": "/"})
 
-def get_current_user(request: Request,
-                     db: SessionLocal = Depends(get_db)):
+def get_current_user(request: Request):
     if request.cookies.get("access_token"):
-        current_user = db.query(User).filter(User.username == request.state.user.get("sub")).first()
-        return current_user.id
+        return request.state.user.get("sub")
     else:
         return None
 

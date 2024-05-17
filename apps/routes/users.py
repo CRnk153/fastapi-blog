@@ -2,15 +2,16 @@ from apps.dependencies import get_db, SessionLocal, get_comments, hash_password
 from apps.schemas import UserProfileEdit, UserPasswordChange
 
 from database.models import User, Post, Followers, Like
-from . import router_auth, router_non_auth
+from . import secure_router, guest_router
 from config import settings
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from sqlalchemy import func
+import jwt
 
-@router_non_auth.get('/users/{user_id:int}')
+@guest_router.get('/users/{user_id:int}')
 def user_get(user_id,
              db: SessionLocal = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -25,7 +26,7 @@ def user_get(user_id,
     }
     return JSONResponse(content=user_info)
 
-@router_non_auth.get('/users/{user_id:int}/posts/{page:int}')
+@guest_router.get('/users/{user_id:int}/posts/{page:int}')
 def user_posts_get(page: int,
                    user_id,
                    db: SessionLocal = Depends(get_db)):
@@ -51,7 +52,7 @@ def user_posts_get(page: int,
     db.close()
     return JSONResponse(content=posts_json)
 
-@router_auth.get('/users/{user_to_follow_id:int}/follow')
+@secure_router.get('/users/{user_to_follow_id:int}/follow')
 def follow_get(request: Request,
                user_to_follow_id: int,
                db: SessionLocal = Depends(get_db)
@@ -68,7 +69,7 @@ def follow_get(request: Request,
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Followed successfully"})
 
-@router_auth.get('/users/{user_to_unfollow_id:int}/unfollow')
+@secure_router.get('/users/{user_to_unfollow_id:int}/unfollow')
 def unfollow_get(request: Request,
                  user_to_unfollow_id: int,
                  db: SessionLocal = Depends(get_db)):
@@ -84,7 +85,7 @@ def unfollow_get(request: Request,
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Unfollowed successfully"})
 
-@router_auth.post('/users/edit-profile')
+@secure_router.post('/users/edit-profile')
 def edit_profile_post(request: Request,
                       user_body: UserProfileEdit,
                       db: SessionLocal = Depends(get_db)):
@@ -98,16 +99,17 @@ def edit_profile_post(request: Request,
     db.commit()
     db.refresh(user)
 
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=timedelta(minutes=settings.EXPIRED_TIME)
-    )
+    access_token = request.cookies.get("access_token")
+    access_token = jwt.decode(access_token, settings.SECRET_KEY, settings.ALGORITHM)
+    access_token["sub"] = user.username
+    access_token = jwt.encode(access_token, settings.SECRET_KEY, settings.ALGORITHM)
 
     server_response = JSONResponse(status_code=200, content={"message": "Successful"})
     server_response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True)
 
     return server_response
 
-@router_auth.post('/users/change-password')
+@secure_router.post('/users/change-password')
 def change_password_post(request: Request,
                          user_body: UserPasswordChange,
                          db: SessionLocal = Depends(get_db)):
