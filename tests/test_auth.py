@@ -33,7 +33,7 @@ def test_register(client, user):
     assert response.status_code == 200
 
 def test_login(client, user):
-    response = client.post('/auth/login', json=user)
+    response = client.post('/auth/login', json=user)  # In order after test_register so it works
     assert response.status_code == 200
     token = response.cookies.get("access_token")
     client.cookies = {"access_token": token}
@@ -42,7 +42,7 @@ def test_login(client, user):
     assert response2.status_code == 200
     assert response2.json() == {"message": "Hello world!", "user": user["username"]}
     decoded_token = jwt.decode(token, settings.SECRET_KEY, settings.ALGORITHM)
-    decoded_token['exp'] -= 960
+    decoded_token['exp'] -= 960  # Imitating expired token
     token2 = jwt.encode(decoded_token, settings.SECRET_KEY, settings.ALGORITHM)
     client.cookies = {"access_token": token2}
     response3 = client.get('/')
