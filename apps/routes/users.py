@@ -52,7 +52,7 @@ def user_posts_get(page: int,
     db.close()
     return JSONResponse(content=posts_json)
 
-@secure_router.get('/users/{user_to_follow_id:int}/follow')
+@secure_router.put('/users/{user_to_follow_id:int}/follow')
 def follow_get(request: Request,
                user_to_follow_id: int,
                db: SessionLocal = Depends(get_db)
@@ -69,7 +69,7 @@ def follow_get(request: Request,
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Followed successfully"})
 
-@secure_router.get('/users/{user_to_unfollow_id:int}/unfollow')
+@secure_router.delete('/users/{user_to_unfollow_id:int}/unfollow')
 def unfollow_get(request: Request,
                  user_to_unfollow_id: int,
                  db: SessionLocal = Depends(get_db)):
@@ -85,7 +85,7 @@ def unfollow_get(request: Request,
     db.commit()
     return JSONResponse(status_code=200, content={"message": "Unfollowed successfully"})
 
-@secure_router.post('/users/edit-profile')
+@secure_router.patch('/users/edit-profile')
 def edit_profile_post(request: Request,
                       user_body: UserProfileEdit,
                       db: SessionLocal = Depends(get_db)):
@@ -109,7 +109,7 @@ def edit_profile_post(request: Request,
 
     return server_response
 
-@secure_router.post('/users/change-password')
+@secure_router.patch('/users/change-password')
 def change_password_post(request: Request,
                          user_body: UserPasswordChange,
                          db: SessionLocal = Depends(get_db)):

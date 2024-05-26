@@ -31,7 +31,7 @@ def messages_post(request: Request,
     return JSONResponse(status_code=200, content={"message": "Post published"})
 
 
-@secure_router.get('/posts/remove/{post_id:int}')
+@secure_router.put('/posts/remove/{post_id:int}')
 def message_delete_get(request: Request,
                        post_id: int,
                        db: SessionLocal = Depends(get_db)):
@@ -145,7 +145,7 @@ def followed_posts_get(request: Request,
     return JSONResponse(content={"data": posts_json})
 
 
-@secure_router.get('/posts/{post_id:int}/like')
+@secure_router.put('/posts/{post_id:int}/like')
 def post_like_get(request: Request,
                   post_id: int,
                   db: SessionLocal = Depends(get_db)):
@@ -172,7 +172,7 @@ def post_like_get(request: Request,
     return JSONResponse(content={"message": "Successful"})
 
 
-@secure_router.get('/posts/{post_id:int}/remove-like')
+@secure_router.delete('/posts/{post_id:int}/remove-like')
 def post_remove_like_get(request: Request,
                          post_id: int,
                          db: SessionLocal = Depends(get_db)):

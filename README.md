@@ -1,11 +1,3 @@
-# fastapi-blog
-Gonna make REST blog.i'll start learning some JS Framework and i'll make design. 
+# fastapi restful api blog
 
-(03.05.2024 commit before working on comments, replies)
-
-(than im gonna start working on js framework. designing.)
-
-17.05.2024 
-
-now i'm gonna end tests, logging, fix security issues(maybe add SameSite)
-and then start learning js framework to design that thing.
+By 26.05, the only things I want to end is Docker, set up for Nginx or Apache, Securing as much as I can, ending tests, claryfing code, adding fastapi features I ignored, and I will go further.
